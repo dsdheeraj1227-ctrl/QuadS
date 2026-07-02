@@ -1,0 +1,685 @@
+<!-- =====================================================================
+     QUAD S CONSULTING — IT / AI consulting site with interactive 3D
+     To add your real logo later, set LOGO_URL in the <script> at the
+     bottom of this file. Until then a "4S" badge stands in.
+     ===================================================================== -->
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>QUAD S CONSULTING — Enterprise AI & Platform Engineering</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;450;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+<!-- Three.js (loads in the browser; the artifact renders this fine) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<style>
+  :root{
+    --bg:#070B14;
+    --bg-2:#0A0F1C;
+    --surface:#0E1626;
+    --surface-2:#111C31;
+    --line:rgba(126,146,184,0.14);
+    --line-strong:rgba(126,146,184,0.26);
+    --ink:#EAEFF8;
+    --muted:#93A0BC;
+    --faint:#5B6884;
+    --violet:#7C6CFF;
+    --cyan:#46E5FF;
+    --violet-soft:rgba(124,108,255,0.16);
+    --cyan-soft:rgba(70,229,255,0.14);
+    --radius:14px;
+    --maxw:1200px;
+    --ease:cubic-bezier(.2,.7,.2,1);
+  }
+
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Inter",system-ui,sans-serif;
+    font-weight:450;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  ::selection{background:var(--violet);color:#fff}
+
+  h1,h2,h3{font-family:"Space Grotesk",sans-serif;font-weight:600;letter-spacing:-0.02em;line-height:1.04;margin:0}
+  a{color:inherit;text-decoration:none}
+  .mono{font-family:"JetBrains Mono",monospace}
+
+  /* blueprint grid + glow atmosphere behind everything */
+  .atmosphere{
+    position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:
+      radial-gradient(1100px 700px at 78% -8%, var(--violet-soft), transparent 60%),
+      radial-gradient(900px 600px at 5% 18%, var(--cyan-soft), transparent 55%),
+      linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%);
+  }
+  .atmosphere::after{
+    content:"";position:absolute;inset:0;opacity:.5;
+    background-image:
+      linear-gradient(var(--line) 1px,transparent 1px),
+      linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:64px 64px;
+    -webkit-mask-image:radial-gradient(circle at 50% 30%,#000 0%,transparent 78%);
+            mask-image:radial-gradient(circle at 50% 30%,#000 0%,transparent 78%);
+  }
+
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 28px;position:relative;z-index:2}
+
+  /* ---------- nav ---------- */
+  header.nav{position:sticky;top:0;z-index:50;
+    backdrop-filter:blur(14px);
+    background:linear-gradient(180deg,rgba(7,11,20,.82),rgba(7,11,20,.4));
+    border-bottom:1px solid var(--line);
+  }
+  .nav-inner{display:flex;align-items:center;justify-content:space-between;height:68px}
+  .brand{display:flex;align-items:center;gap:11px}
+  .brand .mark{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;
+    background:linear-gradient(135deg,var(--violet),var(--cyan));
+    box-shadow:0 0 22px rgba(124,108,255,.5);
+    font-family:"Space Grotesk";font-weight:700;font-size:13px;color:#0a0f1c;letter-spacing:0}
+  .brand-name{font-family:"Space Grotesk";font-weight:700;letter-spacing:.13em;font-size:13.5px;white-space:nowrap}
+  /* uploaded logo (hidden until LOGO_URL is set in the script below) */
+  .brand-logo{display:none;height:30px;width:auto;max-width:210px}
+  .brand.has-logo .mark,.brand.has-logo .brand-name{display:none}
+  .brand.has-logo .brand-logo{display:block}
+  .navlinks{display:flex;gap:30px;align-items:center}
+  .navlinks a{font-size:14px;color:var(--muted);transition:color .2s}
+  .navlinks a:hover{color:var(--ink)}
+  .btn{display:inline-flex;align-items:center;gap:8px;font-family:"Space Grotesk";font-weight:600;
+    font-size:14px;padding:11px 18px;border-radius:10px;cursor:pointer;border:1px solid transparent;
+    transition:transform .18s var(--ease),box-shadow .25s var(--ease),background .25s}
+  .btn-primary{color:#0a0f1c;background:linear-gradient(135deg,#a99cff,var(--cyan));
+    box-shadow:0 8px 30px -8px rgba(70,229,255,.55)}
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 14px 40px -10px rgba(124,108,255,.7)}
+  .btn-ghost{color:var(--ink);border-color:var(--line-strong);background:rgba(255,255,255,.02)}
+  .btn-ghost:hover{border-color:var(--cyan);color:#fff}
+  .menu-toggle{display:none;background:none;border:1px solid var(--line-strong);color:var(--ink);
+    border-radius:8px;padding:8px 10px;cursor:pointer}
+
+  /* ---------- hero ---------- */
+  .hero{position:relative;min-height:92vh;display:flex;align-items:center;overflow:hidden}
+  #hero-canvas{position:absolute;inset:0;z-index:1;pointer-events:none}
+  .hero .wrap{z-index:3}
+  .hero-grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:40px;align-items:center}
+  .hero-copy{padding:90px 0}
+  .eyebrow{display:inline-flex;align-items:center;gap:10px;font-family:"JetBrains Mono";
+    font-size:12px;letter-spacing:.22em;color:var(--cyan);text-transform:uppercase;margin-bottom:24px}
+  .eyebrow .dot{width:7px;height:7px;border-radius:50%;background:var(--cyan);
+    box-shadow:0 0 12px var(--cyan);animation:pulse 2.4s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  h1.headline{font-size:clamp(38px,5.4vw,68px);max-width:14ch}
+  h1.headline .grad{background:linear-gradient(120deg,var(--cyan),var(--violet));
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .lede{color:var(--muted);font-size:clamp(16px,1.4vw,19px);max-width:48ch;margin:26px 0 34px}
+  .hero-cta{display:flex;gap:14px;flex-wrap:wrap}
+  .hero-stats{display:flex;gap:34px;margin-top:54px;flex-wrap:wrap}
+  .hero-stats .s .n{font-family:"Space Grotesk";font-weight:600;font-size:28px}
+  .hero-stats .s .l{font-family:"JetBrains Mono";font-size:11px;letter-spacing:.12em;color:var(--faint);text-transform:uppercase}
+
+  /* corner registration marks (engineering motif) */
+  .reg{position:absolute;font-family:"JetBrains Mono";font-size:10.5px;letter-spacing:.18em;
+    color:var(--faint);z-index:4;display:flex;align-items:center;gap:7px}
+  .reg::before{content:"";width:18px;height:1px;background:var(--line-strong)}
+  .reg.tl{top:84px;left:28px}
+  .reg.br{bottom:24px;right:28px}
+  .reg.br::before{order:2}
+
+  /* ---------- generic section ---------- */
+  section{position:relative;z-index:2;padding:104px 0}
+  .sec-head{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;margin-bottom:54px;flex-wrap:wrap}
+  .tag{font-family:"JetBrains Mono";font-size:12px;letter-spacing:.2em;color:var(--cyan);text-transform:uppercase}
+  .sec-head h2{font-size:clamp(28px,3.4vw,42px);max-width:18ch;margin-top:14px}
+  .sec-head p{color:var(--muted);max-width:42ch;margin:0}
+
+  /* services */
+  .svc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  .card{background:linear-gradient(180deg,var(--surface),var(--surface-2));
+    border:1px solid var(--line);border-radius:var(--radius);padding:26px;position:relative;overflow:hidden;
+    transition:transform .25s var(--ease),border-color .25s,box-shadow .25s}
+  .card::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;
+    background:linear-gradient(135deg,var(--violet),transparent 40%,transparent 60%,var(--cyan));
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor;mask-composite:exclude;opacity:0;transition:opacity .3s}
+  .card:hover{transform:translateY(-5px);box-shadow:0 26px 50px -28px rgba(70,229,255,.4)}
+  .card:hover::before{opacity:1}
+  .card .cat{font-family:"JetBrains Mono";font-size:11px;letter-spacing:.14em;color:var(--faint);text-transform:uppercase}
+  .card h3{font-size:21px;margin:16px 0 10px}
+  .card p{color:var(--muted);font-size:14.5px;margin:0}
+  .card .ic{width:42px;height:42px;border-radius:11px;display:grid;place-items:center;
+    background:radial-gradient(circle at 30% 30%,var(--violet-soft),transparent),var(--bg-2);
+    border:1px solid var(--line-strong);margin-bottom:18px}
+  .card .ic svg{width:22px;height:22px;stroke:var(--cyan);fill:none;stroke-width:1.6}
+
+  /* platform showcase */
+  .platform{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center}
+  .platform-visual{position:relative;aspect-ratio:1/1;border-radius:20px;overflow:hidden;
+    background:radial-gradient(circle at 50% 50%,rgba(124,108,255,.10),transparent 70%);
+    border:1px solid var(--line)}
+  #platform-canvas{position:absolute;inset:0}
+  .platform-visual .hud{position:absolute;left:16px;bottom:14px;font-family:"JetBrains Mono";
+    font-size:11px;color:var(--faint);letter-spacing:.1em}
+  .platform-visual .hud b{color:var(--cyan);font-weight:500}
+  .feat{display:flex;gap:16px;margin:22px 0}
+  .feat .k{flex:none;width:34px;height:34px;border-radius:9px;display:grid;place-items:center;
+    border:1px solid var(--line-strong);background:var(--bg-2);color:var(--cyan)}
+  .feat .k svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.7}
+  .feat h4{font-family:"Space Grotesk";font-weight:600;font-size:16.5px;margin:0 0 4px}
+  .feat p{color:var(--muted);font-size:14px;margin:0}
+
+  /* engagement model — a real sequence, so numbering earns its place */
+  .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-top:1px solid var(--line)}
+  .step{padding:30px 22px 30px 0;border-right:1px solid var(--line);position:relative}
+  .step:last-child{border-right:none}
+  .step .num{font-family:"JetBrains Mono";font-size:13px;color:var(--cyan);letter-spacing:.1em}
+  .step .bar{height:2px;margin:16px 0 18px;background:var(--line);position:relative;overflow:hidden}
+  .step .bar::after{content:"";position:absolute;inset:0;width:38%;
+    background:linear-gradient(90deg,var(--violet),var(--cyan))}
+  .step:nth-child(2) .bar::after{width:62%}
+  .step:nth-child(3) .bar::after{width:80%}
+  .step:nth-child(4) .bar::after{width:100%}
+  .step h4{font-family:"Space Grotesk";font-size:18px;margin:0 0 8px}
+  .step p{color:var(--muted);font-size:13.5px;margin:0}
+
+  /* proof strip */
+  .proof{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;
+    border:1px solid var(--line);border-radius:var(--radius);padding:38px 30px;
+    background:linear-gradient(180deg,var(--surface),transparent)}
+  .proof .p .n{font-family:"Space Grotesk";font-weight:700;font-size:clamp(28px,3.6vw,40px);
+    background:linear-gradient(120deg,#fff,var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .proof .p .l{color:var(--muted);font-size:13.5px;margin-top:6px}
+
+  /* industries */
+  .pill-row{display:flex;flex-wrap:wrap;gap:12px}
+  .pill{font-family:"JetBrains Mono";font-size:13px;color:var(--muted);border:1px solid var(--line);
+    padding:9px 16px;border-radius:999px;background:var(--bg-2);transition:.25s}
+  .pill:hover{color:var(--ink);border-color:var(--cyan);transform:translateY(-2px)}
+
+  /* CTA */
+  .cta-box{position:relative;border:1px solid var(--line-strong);border-radius:22px;overflow:hidden;
+    padding:64px 48px;text-align:center;
+    background:radial-gradient(700px 320px at 50% 0%,var(--violet-soft),transparent 70%),var(--surface)}
+  .cta-box h2{font-size:clamp(28px,3.6vw,46px);margin-bottom:16px}
+  .cta-box p{color:var(--muted);max-width:50ch;margin:0 auto 30px}
+  .cta-box .hero-cta{justify-content:center}
+
+  /* footer */
+  footer{border-top:1px solid var(--line);padding:54px 0 40px;position:relative;z-index:2}
+  .foot-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:30px}
+  .foot-grid h5{font-family:"JetBrains Mono";font-size:11px;letter-spacing:.16em;color:var(--faint);
+    text-transform:uppercase;margin:0 0 16px}
+  .foot-grid a{display:block;color:var(--muted);font-size:14px;padding:5px 0;transition:color .2s}
+  .foot-grid a:hover{color:var(--ink)}
+  .foot-bottom{display:flex;justify-content:space-between;align-items:center;margin-top:46px;
+    padding-top:24px;border-top:1px solid var(--line);color:var(--faint);font-size:13px;flex-wrap:wrap;gap:12px}
+  .foot-bottom .mono{letter-spacing:.08em}
+
+  /* reveal on scroll */
+  .reveal{opacity:0;transform:translateY(22px);transition:opacity .7s var(--ease),transform .7s var(--ease)}
+  .reveal.in{opacity:1;transform:none}
+
+  /* ---------- responsive ---------- */
+  @media(max-width:980px){
+    .hero-grid{grid-template-columns:1fr}
+    .platform{grid-template-columns:1fr}
+    .svc-grid{grid-template-columns:1fr 1fr}
+    .steps{grid-template-columns:1fr 1fr}
+    .step{border-right:none;border-bottom:1px solid var(--line)}
+    .proof{grid-template-columns:1fr 1fr}
+    .foot-grid{grid-template-columns:1fr 1fr}
+    .navlinks{display:none}
+    .menu-toggle{display:inline-flex}
+  }
+  @media(max-width:560px){
+    .svc-grid{grid-template-columns:1fr}
+    .proof{grid-template-columns:1fr 1fr;gap:28px 16px}
+    .foot-grid{grid-template-columns:1fr 1fr}
+    .hero-copy{padding:64px 0}
+    .reg{display:none}
+  }
+  @media(prefers-reduced-motion:reduce){
+    *{scroll-behavior:auto}
+    .reveal{transition:none;opacity:1;transform:none}
+    .eyebrow .dot{animation:none}
+  }
+</style>
+
+<div class="atmosphere"></div>
+
+<!-- ============ NAV ============ -->
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a class="brand" href="#top"><span class="mark">4S</span><img src="https://mega.nz/file/ozxCVAJB#yHY56oUcn36F9SkENFMjB4wqOVyZztJtzyJXELhDwT0" alt="QUAD S Consulting Services Logo"> 
+    <nav class="navlinks">
+      <a href="#services">Capabilities</a>
+      <a href="#platform">Platform</a>
+      <a href="#process">How we work</a>
+      <a href="#industries">Industries</a>
+    </nav>
+    <div style="display:flex;gap:12px;align-items:center">
+      <a class="btn btn-primary" href="#contact">Book a consult</a>
+      <button class="menu-toggle" id="menuBtn" aria-label="Menu">☰</button>
+    </div>
+  </div>
+</header>
+
+<!-- ============ HERO ============ -->
+<div id="top"></div>
+<div class="hero">
+  <canvas id="hero-canvas"></canvas>
+  <span class="reg tl mono">SYS.NODE / 41.84°N · 88.07°W · SCHAUMBURG</span>
+  <span class="reg br mono">RENDER · WEBGL · 60FPS</span>
+  <div class="wrap">
+    <div class="hero-grid">
+      <div class="hero-copy">
+        <span class="eyebrow"><span class="dot"></span>Enterprise AI &amp; Platform Engineering</span>
+        <h1 class="headline">We build the systems your <span class="grad">strategy</span> assumes you already have.</h1>
+        <p class="lede">Quad S Consulting is an engineering-led firm. We design, build, and run the AI platforms, cloud foundations, and modernized applications that carry real production load — not slideware.</p>
+        <div class="hero-cta">
+          <a class="btn btn-primary" href="#contact">Start a project →</a>
+          <a class="btn btn-ghost" href="#platform">See the platform</a>
+        </div>
+        <div class="hero-stats">
+          <div class="s"><div class="n">200+</div><div class="l">Engineers on call</div></div>
+          <div class="s"><div class="n">40+</div><div class="l">Platforms shipped</div></div>
+          <div class="s"><div class="n">99.95%</div><div class="l">Run-rate uptime</div></div>
+        </div>
+      </div>
+      <div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SERVICES ============ -->
+<section id="services">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div>
+        <span class="tag">// Capabilities</span>
+        <h2>Six practices, one accountable team.</h2>
+      </div>
+      <p>We staff senior pods that own outcomes end-to-end — from architecture decisions to the pager.</p>
+    </div>
+    <div class="svc-grid">
+      <div class="card reveal">
+        <div class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l3 3M16 16l3 3M19 5l-3 3M8 16l-3 3"/></svg></div>
+        <div class="cat">AI / ML</div>
+        <h3>Applied Machine Learning</h3>
+        <p>Retrieval pipelines, model fine-tuning, and LLM systems wired into your real data — evaluated, governed, and shipped to production.</p>
+      </div>
+      <div class="card reveal">
+        <div class="ic"><svg viewBox="0 0 24 24"><path d="M4 16a4 4 0 0 1 0-8 5 5 0 0 1 9.6-1.5A4.5 4.5 0 1 1 18 16Z"/></svg></div>
+        <div class="cat">Infrastructure</div>
+        <h3>Cloud &amp; Platform Engineering</h3>
+        <p>Landing zones, Kubernetes, and internal developer platforms on AWS and Azure that teams actually want to build on.</p>
+      </div>
+      <div class="card reveal">
+        <div class="ic"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg></div>
+        <div class="cat">Data</div>
+        <h3>Data Infrastructure</h3>
+        <p>Lakehouse architecture, streaming, and the contracts that keep analytics and ML trustworthy as you scale.</p>
+      </div>
+      <div class="card reveal">
+        <div class="ic"><svg viewBox="0 0 24 24"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg></div>
+        <div class="cat">Modernization</div>
+        <h3>Application Modernization</h3>
+        <p>Legacy and monolith migrations — including specialized insurance platforms — re-architected without freezing the business.</p>
+      </div>
+      <div class="card reveal">
+        <div class="ic"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0M16 11a3 3 0 1 0-1-5.8M21 20a6 6 0 0 0-5-5.9"/></svg></div>
+        <div class="cat">Teams</div>
+        <h3>Managed Engineering Pods</h3>
+        <p>Cross-functional squads embedded into your delivery, with clear ownership, velocity, and a path to hand back the keys.</p>
+      </div>
+      <div class="card reveal">
+        <div class="ic"><svg viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6Z"/><path d="M9 12l2 2 4-4"/></svg></div>
+        <div class="cat">Reliability</div>
+        <h3>Security &amp; Reliability</h3>
+        <p>Zero-trust patterns, SRE practices, and observability so the platform stays calm under real-world load.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PLATFORM (3D AI showcase) ============ -->
+<section id="platform">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div>
+        <span class="tag">// The Quad S Platform</span>
+        <h2>A 3D AI workspace that models your whole system.</h2>
+      </div>
+      <p>One interactive surface where architecture, models, and live telemetry sit in the same space — explorable, not buried in dashboards.</p>
+    </div>
+
+    <div class="platform">
+      <div class="platform-visual reveal">
+        <!-- Interactive 3D mesh #2 renders here -->
+        <canvas id="platform-canvas"></canvas>
+        <div class="hud mono">CORE · <b>online</b> · 1,024 nodes synced</div>
+
+        <!-- ░░ OPTIONAL: use YOUR OWN Spline scene instead of the Three.js mesh ░░
+             1. Build/export a scene at https://spline.design
+             2. Uncomment the two lines below and delete the <canvas> above
+             3. Paste your scene's .splinecode URL into `url`
+        <script type="module" src="https://unpkg.com/@splinetool/viewer@1.9.48/build/spline-viewer.js"></script>
+        <spline-viewer url="https://prod.spline.design/YOUR-SCENE/scene.splinecode" style="position:absolute;inset:0;width:100%;height:100%"></spline-viewer>
+        -->
+      </div>
+
+      <div class="platform-copy">
+        <div class="feat reveal">
+          <div class="k"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 14l3-4 3 3 5-7"/></svg></div>
+          <div><h4>Live system topology</h4><p>Services, models, and data flows rendered as one navigable 3D graph that updates from production.</p></div>
+        </div>
+        <div class="feat reveal">
+          <div class="k"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+          <div><h4>Model + cost observability</h4><p>Track latency, token spend, and drift per model node — and trace any anomaly to its source in seconds.</p></div>
+        </div>
+        <div class="feat reveal">
+          <div class="k"><svg viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7Z"/></svg></div>
+          <div><h4>Scenario simulation</h4><p>Replay traffic and failure scenarios against the live model before you ever touch the real environment.</p></div>
+        </div>
+        <a class="btn btn-ghost reveal" href="#contact" style="margin-top:8px">Request a walkthrough</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PROCESS (a real sequence → numbered) ============ -->
+<section id="process">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div>
+        <span class="tag">// How we work</span>
+        <h2>From whiteboard to on-call in four moves.</h2>
+      </div>
+      <p>A fixed-shape engagement so you always know what comes next and who owns it.</p>
+    </div>
+    <div class="steps">
+      <div class="step reveal"><div class="num">01</div><div class="bar"></div><h4>Discover &amp; architect</h4><p>Two-week deep dive into constraints, data, and risk. You leave with a costed architecture, not a deck.</p></div>
+      <div class="step reveal"><div class="num">02</div><div class="bar"></div><h4>Build the foundation</h4><p>A senior pod ships the platform spine — IaC, CI/CD, security baselines — in production from week one.</p></div>
+      <div class="step reveal"><div class="num">03</div><div class="bar"></div><h4>Scale &amp; enable</h4><p>We harden, instrument, and train your teams to extend the system with confidence.</p></div>
+      <div class="step reveal"><div class="num">04</div><div class="bar"></div><h4>Run &amp; optimize</h4><p>Optional managed operations with SLAs, or a clean handover with full documentation.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PROOF ============ -->
+<section style="padding-top:0">
+  <div class="wrap">
+    <div class="proof reveal">
+      <div class="p"><div class="n">12 yrs</div><div class="l">Average architect tenure</div></div>
+      <div class="p"><div class="n">4</div><div class="l">Continents delivered across</div></div>
+      <div class="p"><div class="n">3.2×</div><div class="l">Median deploy-frequency lift</div></div>
+      <div class="p"><div class="n">61%</div><div class="l">Avg. cloud-cost reduction</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ INDUSTRIES ============ -->
+<section id="industries" style="padding-top:0">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div>
+        <span class="tag">// Industries</span>
+        <h2>Domain fluency, not just frameworks.</h2>
+      </div>
+      <p>We speak the language of regulated, complex environments — and have the scar tissue to prove it.</p>
+    </div>
+    <div class="pill-row reveal">
+      <span class="pill">P&amp;C Insurance</span>
+      <span class="pill">Duck Creek Platforms</span>
+      <span class="pill">Financial Services</span>
+      <span class="pill">Healthcare</span>
+      <span class="pill">Logistics &amp; Supply Chain</span>
+      <span class="pill">Manufacturing</span>
+      <span class="pill">Public Sector</span>
+      <span class="pill">Retail &amp; eCommerce</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CTA ============ -->
+<section id="contact">
+  <div class="wrap">
+    <div class="cta-box reveal">
+      <span class="tag">// Let's build</span>
+      <h2 style="margin-top:14px">Tell us what's stuck. We'll tell you how we'd unstick it.</h2>
+      <p>A 30-minute working session with a principal engineer — no sales pre-screen, no obligation. You leave with a real first step.</p>
+      <div class="hero-cta">
+        <a class="btn btn-primary" href="mailto:hello@quadsconsulting.com">Book a consult →</a>
+        <a class="btn btn-ghost" href="#services">Review capabilities</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <a class="brand" href="#top" style="margin-bottom:14px"><span class="mark">4S</span><img class="brand-logo" alt="QUAD S CONSULTING"><span class="brand-name">QUAD S CONSULTING</span></a>
+        <p style="color:var(--muted);font-size:14px;max-width:34ch;margin:0">Engineering-led AI &amp; platform consulting for teams that have to ship.</p>
+      </div>
+      <div>
+        <h5>Company</h5>
+        <a href="#services">Capabilities</a><a href="#platform">Platform</a><a href="#process">How we work</a><a href="#industries">Industries</a>
+      </div>
+      <div>
+        <h5>Connect</h5>
+        <a href="mailto:hello@quadsconsulting.com">hello@quadsconsulting.com</a><a href="#">LinkedIn</a><a href="#">GitHub</a><a href="#contact">Book a consult</a>
+      </div>
+      <div>
+        <h5>Office</h5>
+        <a href="#">Schaumburg, IL</a><a href="#">Remote-first</a>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© 2026 Quad S Consulting. Placeholder content for demonstration.</span>
+      <span class="mono">BUILD 2026.06 · WEBGL/THREE.js</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+/* ===================================================================
+   Interactive 3D — built with Three.js so it's owned, fast, and
+   needs no external scene host. Two scenes: hero neural core +
+   platform wireframe mesh. Both react to the pointer.
+   =================================================================== */
+(function(){
+  /* ┌──────────────────────────────────────────────────────────────┐
+     │  UPLOAD YOUR LOGO LATER                                        │
+     │  When your QUAD S CONSULTING logo is ready, drop the image     │
+     │  file next to this .html file and put its name (or any URL)    │
+     │  between the quotes below. Leave empty to keep the "4S" badge. │
+     │  e.g.  var LOGO_URL = "quad-s-logo.svg";                       │
+     └──────────────────────────────────────────────────────────────┘ */
+  var LOGO_URL = "";
+
+  (function applyLogo(){
+    if(!LOGO_URL) return;
+    document.querySelectorAll(".brand").forEach(function(b){
+      var img = b.querySelector(".brand-logo");
+      if(img){ img.src = LOGO_URL; b.classList.add("has-logo"); }
+    });
+  })();
+
+  if (typeof THREE === "undefined") return;
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // glowing circular sprite for node points
+  function glowTexture(){
+    var c = document.createElement("canvas"); c.width = c.height = 64;
+    var ctx = c.getContext("2d");
+    var g = ctx.createRadialGradient(32,32,0,32,32,32);
+    g.addColorStop(0,"rgba(255,255,255,1)");
+    g.addColorStop(0.25,"rgba(160,200,255,0.9)");
+    g.addColorStop(0.6,"rgba(90,120,255,0.35)");
+    g.addColorStop(1,"rgba(70,229,255,0)");
+    ctx.fillStyle = g; ctx.fillRect(0,0,64,64);
+    var t = new THREE.Texture(c); t.needsUpdate = true; return t;
+  }
+  var SPRITE = glowTexture();
+
+  function fibSphere(n, r){
+    var pts = [], off = 2/n, inc = Math.PI*(3-Math.sqrt(5));
+    for(var i=0;i<n;i++){
+      var y = i*off - 1 + off/2, rad = Math.sqrt(1-y*y), phi = i*inc;
+      pts.push(new THREE.Vector3(Math.cos(phi)*rad*r, y*r, Math.sin(phi)*rad*r));
+    }
+    return pts;
+  }
+
+  /* ---------------- HERO: neural core ---------------- */
+  (function heroScene(){
+    var canvas = document.getElementById("hero-canvas");
+    if(!canvas) return;
+    var scene = new THREE.Scene();
+    var camera = new THREE.PerspectiveCamera(52, 1, 0.1, 100);
+    camera.position.set(0,0,15.5);
+    var renderer = new THREE.WebGLRenderer({canvas:canvas, alpha:true, antialias:true});
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+
+    var group = new THREE.Group(); scene.add(group);
+
+    // nodes on two nested shells
+    var nodes = fibSphere(86, 5.2).concat(fibSphere(40, 3.1));
+    var npos = new Float32Array(nodes.length*3);
+    nodes.forEach(function(p,i){ npos[i*3]=p.x; npos[i*3+1]=p.y; npos[i*3+2]=p.z; });
+    var ng = new THREE.BufferGeometry();
+    ng.setAttribute("position", new THREE.BufferAttribute(npos,3));
+    var nmat = new THREE.PointsMaterial({size:0.5, map:SPRITE, transparent:true,
+      blending:THREE.AdditiveBlending, depthWrite:false, opacity:0.95, sizeAttenuation:true});
+    group.add(new THREE.Points(ng, nmat));
+
+    // connect nearby nodes
+    var lpos = [], maxLinks = 3;
+    for(var i=0;i<nodes.length;i++){
+      var cnt=0, dlist=[];
+      for(var j=0;j<nodes.length;j++){ if(i!==j) dlist.push([nodes[i].distanceTo(nodes[j]),j]); }
+      dlist.sort(function(a,b){return a[0]-b[0]});
+      for(var k=0;k<dlist.length && cnt<maxLinks;k++){
+        if(dlist[k][0]<2.6){ var b=nodes[dlist[k][1]];
+          lpos.push(nodes[i].x,nodes[i].y,nodes[i].z, b.x,b.y,b.z); cnt++; }
+      }
+    }
+    var lg = new THREE.BufferGeometry();
+    lg.setAttribute("position", new THREE.BufferAttribute(new Float32Array(lpos),3));
+    var lmat = new THREE.LineBasicMaterial({color:0x5a7cff, transparent:true, opacity:0.18,
+      blending:THREE.AdditiveBlending, depthWrite:false});
+    group.add(new THREE.LineSegments(lg, lmat));
+
+    // inner wireframe icosahedron
+    var ico = new THREE.Mesh(
+      new THREE.IcosahedronGeometry(2.05, 1),
+      new THREE.MeshBasicMaterial({color:0x46e5ff, wireframe:true, transparent:true, opacity:0.16})
+    );
+    group.add(ico);
+
+    // ambient drifting dust
+    var dN=420, dpos=new Float32Array(dN*3);
+    for(var d=0;d<dN;d++){ dpos[d*3]=(Math.random()-.5)*34; dpos[d*3+1]=(Math.random()-.5)*22; dpos[d*3+2]=(Math.random()-.5)*20; }
+    var dg=new THREE.BufferGeometry(); dg.setAttribute("position",new THREE.BufferAttribute(dpos,3));
+    var dust=new THREE.Points(dg,new THREE.PointsMaterial({size:0.07,color:0x8fb6ff,transparent:true,opacity:0.5,depthWrite:false}));
+    scene.add(dust);
+
+    var mx=0,my=0,tx=0,ty=0;
+    window.addEventListener("mousemove",function(e){
+      tx=(e.clientX/window.innerWidth-0.5); ty=(e.clientY/window.innerHeight-0.5);
+    });
+
+    function size(){
+      var w=canvas.clientWidth||window.innerWidth, h=canvas.clientHeight||window.innerHeight;
+      renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix();
+    }
+    new ResizeObserver(size).observe(canvas); size();
+
+    var t0=performance.now();
+    function loop(now){
+      requestAnimationFrame(loop);
+      var t=(now-t0)/1000;
+      mx+=(tx-mx)*0.05; my+=(ty-my)*0.05;
+      if(!reduce){
+        group.rotation.y += 0.0016; group.rotation.x = my*0.5;
+        group.rotation.y += mx*0.012;
+        ico.rotation.x -= 0.003; ico.rotation.z += 0.002;
+        dust.rotation.y += 0.0004;
+        var s=1+Math.sin(t*1.4)*0.012; group.scale.setScalar(s);
+        lmat.opacity = 0.14 + Math.sin(t*1.4)*0.06;
+      }
+      camera.position.x += (mx*2.2 - camera.position.x)*0.05;
+      camera.position.y += (-my*1.6 - camera.position.y)*0.05;
+      camera.lookAt(0,0,0);
+      renderer.render(scene,camera);
+    }
+    requestAnimationFrame(loop);
+  })();
+
+  /* ---------------- PLATFORM: wireframe mesh + orbit ---------------- */
+  (function platformScene(){
+    var canvas = document.getElementById("platform-canvas");
+    if(!canvas) return;
+    var scene=new THREE.Scene();
+    var camera=new THREE.PerspectiveCamera(50,1,0.1,100); camera.position.set(0,0,6.4);
+    var renderer=new THREE.WebGLRenderer({canvas:canvas,alpha:true,antialias:true});
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+
+    var grp=new THREE.Group(); scene.add(grp);
+    var geo=new THREE.IcosahedronGeometry(2.1,1);
+    grp.add(new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:0x7c6cff,wireframe:true,transparent:true,opacity:0.55})));
+    grp.add(new THREE.Points(geo,new THREE.PointsMaterial({size:0.13,map:SPRITE,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false})));
+
+    // orbiting satellites
+    var sat=fibSphere(60,3.0), spos=new Float32Array(sat.length*3);
+    sat.forEach(function(p,i){spos[i*3]=p.x;spos[i*3+1]=p.y;spos[i*3+2]=p.z;});
+    var sg=new THREE.BufferGeometry(); sg.setAttribute("position",new THREE.BufferAttribute(spos,3));
+    var orbit=new THREE.Points(sg,new THREE.PointsMaterial({size:0.09,color:0x46e5ff,transparent:true,opacity:0.85,depthWrite:false}));
+    scene.add(orbit);
+
+    var tx=0,ty=0,mx=0,my=0;
+    canvas.addEventListener("mousemove",function(e){
+      var r=canvas.getBoundingClientRect();
+      tx=((e.clientX-r.left)/r.width-0.5); ty=((e.clientY-r.top)/r.height-0.5);
+    });
+    canvas.addEventListener("mouseleave",function(){tx=0;ty=0;});
+
+    function size(){var w=canvas.clientWidth,h=canvas.clientHeight; if(!w||!h)return;
+      renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix();}
+    new ResizeObserver(size).observe(canvas); size();
+
+    function loop(){
+      requestAnimationFrame(loop);
+      mx+=(tx-mx)*0.06; my+=(ty-my)*0.06;
+      if(!reduce){ grp.rotation.y+=0.004; grp.rotation.x+=0.0016; orbit.rotation.y-=0.006; orbit.rotation.x+=0.002; }
+      grp.rotation.y+=mx*0.02; grp.rotation.x+=my*0.02;
+      renderer.render(scene,camera);
+    }
+    requestAnimationFrame(loop);
+  })();
+
+  /* ---------------- reveal on scroll ---------------- */
+  var io=new IntersectionObserver(function(es){
+    es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add("in"); io.unobserve(e.target);} });
+  },{threshold:0.12});
+  document.querySelectorAll(".reveal").forEach(function(el,i){
+    el.style.transitionDelay=(Math.min(i%3,3)*0.06)+"s"; io.observe(el);
+  });
+
+  /* mobile menu (simple anchor reveal) */
+  var mb=document.getElementById("menuBtn");
+  if(mb) mb.addEventListener("click",function(){
+    var n=document.querySelector(".navlinks");
+    if(n.style.display==="flex"){n.style.display="";}
+    else{n.style.cssText="display:flex;position:absolute;top:68px;left:0;right:0;flex-direction:column;background:var(--bg-2);padding:18px 28px;border-bottom:1px solid var(--line);gap:14px";}
+  });
+})();
+</script>
